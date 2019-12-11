@@ -90,12 +90,12 @@ static void doOptimizedDemo(void) {
 	// Make and print the QR Code symbol
 	uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
 	uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
-	uint8_t optimizationBufffer[qrcodegen_OPTIMIZATION_BUFFER_LEN_MAX];
+	uint8_t optimizationBuffer[qrcodegen_OPTIMIZATION_BUFFER_LEN_MAX];
 	uint8_t segmentBuffer[qrcodegen_OPTIMIZED_SEGMENT_BUFFER_LEN_MAX];
 
 	uint8_t* charModes = malloc(strlen(text) + sizeof(char));
 
-	bool ok = qrcodegen_encodeTextOptimized(text, optimizationBufffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
+	bool ok = qrcodegen_encodeTextOptimized(text, optimizationBuffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
 		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 	if (ok)
 		saveQr(qrcode, "QR.BMP");
