@@ -146,7 +146,7 @@ struct qrcodegen_Segment {
 #define qrcodegen_OPTIMIZED_MODE_TYPES_NUM 3
 #define qrcodegen_OPTIMIZATION_BUFFER_LEN_MAX (qrcodegen_BUFFER_LEN_MAX * qrcodegen_OPTIMIZED_MODE_TYPES_NUM)
 
-#define qrcodegen_OPTIMIZED_SEGMENTS_MAX  10 // The maximum segments in optimized QR code
+#define qrcodegen_OPTIMIZED_SEGMENTS_MAX  20 // The maximum segments in optimized QR code
 #define qrcodegen_OPTIMIZED_SEGMENT_BUFFER_LEN_MAX (qrcodegen_BUFFER_LEN_MAX * qrcodegen_OPTIMIZED_SEGMENTS_MAX)
 
 

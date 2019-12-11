@@ -67,7 +67,8 @@ static void doBasicDemo(void) {
 	bool ok = qrcodegen_encodeText(text, tempBuffer, qrcode, errCorLvl,
 		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 	if (ok)
-		printQr(qrcode);
+		saveQr(qrcode, "QR-Basic.BMP");
+		//printQr(qrcode);
 }
 
 // Creates an optimized QR Code, then prints it to the console.
@@ -85,6 +86,29 @@ static void doOptimizedDemo(void) {
 						"6015Tbilisiabcdefgh"
 						"623005091234567890713QR-WJ24I08B9K"
 						"630420D7";                // User-supplied text
+	const char *text2 =	"000201"
+						"010211"
+						"2681"
+						"0011SG.COM.NETS"
+						"01231198500065G991231235900"
+						"021111168661400"
+						"030868661401"
+						"9908604108C2"
+						"5180"
+						"0007SG.SGQR"
+						"01121809072DD85C"
+						"020701.0001"
+						"0306079027"
+						"040201"
+						"050206"
+						"06040000"
+						"070820180915"
+						"52045812"
+						"5303702"
+						"5802SG"
+						"5912SOBA EXPRESS"
+						"6009Singapore"
+						"630457B3";
 	enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;  // Error correction level
 	
 	// Make and print the QR Code symbol
@@ -98,7 +122,12 @@ static void doOptimizedDemo(void) {
 	bool ok = qrcodegen_encodeTextOptimized(text, optimizationBuffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
 		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 	if (ok)
-		saveQr(qrcode, "QR.BMP");
+		saveQr(qrcode, "QR-Optimized-1.BMP");
+
+	ok = qrcodegen_encodeTextOptimized(text2, optimizationBuffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
+		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	if (ok)
+		saveQr(qrcode, "QR-Optimized-2.BMP");
 		//printQr(qrcode);
 
 	free(charModes);
@@ -113,7 +142,8 @@ static void doVarietyDemo(void) {
 		bool ok = qrcodegen_encodeText("314159265358979323846264338327950288419716939937510", tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Variety-1.BMP");
+			//printQr(qrcode);
 	}
 	
 	{  // Alphanumeric mode encoding (5.5 bits per character)
@@ -122,7 +152,8 @@ static void doVarietyDemo(void) {
 		bool ok = qrcodegen_encodeText("DOLLAR-AMOUNT:$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/", tempBuffer, qrcode,
 			qrcodegen_Ecc_HIGH, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Variety-2.BMP");
+			//printQr(qrcode);
 	}
 	
 	{  // Unicode text as UTF-8
@@ -133,7 +164,8 @@ static void doVarietyDemo(void) {
 		bool ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
 			qrcodegen_Ecc_QUARTILE, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Variety-3.BMP");
+			//printQr(qrcode);
 	}
 	
 	{  // Moderately large QR Code using longer text (from Lewis Carroll's Alice in Wonderland)
@@ -150,7 +182,8 @@ static void doVarietyDemo(void) {
 		bool ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
 			qrcodegen_Ecc_HIGH, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Variety-4.BMP");
+			//printQr(qrcode);
 	}
 }
 
@@ -170,7 +203,8 @@ static void doSegmentDemo(void) {
 			ok = qrcodegen_encodeText(concat, tempBuffer, qrcode, qrcodegen_Ecc_LOW,
 				qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 			if (ok)
-				printQr(qrcode);
+				saveQr(qrcode, "QR-Segment-1.BMP");
+				//printQr(qrcode);
 			free(concat);
 		}
 		{
@@ -184,7 +218,8 @@ static void doSegmentDemo(void) {
 			free(segBuf0);
 			free(segBuf1);
 			if (ok)
-				printQr(qrcode);
+				saveQr(qrcode, "QR-Segment-2.BMP");
+				//printQr(qrcode);
 		}
 	}
 	
@@ -203,7 +238,8 @@ static void doSegmentDemo(void) {
 			ok = qrcodegen_encodeText(concat, tempBuffer, qrcode, qrcodegen_Ecc_LOW,
 				qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 			if (ok)
-				printQr(qrcode);
+				saveQr(qrcode, "QR-Segment-3.BMP");
+				//printQr(qrcode);
 			free(concat);
 		}
 		{
@@ -224,7 +260,8 @@ static void doSegmentDemo(void) {
 			free(segBuf1);
 			free(segBuf2);
 			if (ok)
-				printQr(qrcode);
+				saveQr(qrcode, "QR-Segment-4.BMP");
+				//printQr(qrcode);
 		}
 	}
 	
@@ -246,7 +283,8 @@ static void doSegmentDemo(void) {
 			ok = qrcodegen_encodeText(madoka, tempBuffer, qrcode, qrcodegen_Ecc_LOW,
 				qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 			if (ok)
-				printQr(qrcode);
+				saveQr(qrcode, "QR-Segment-4.BMP");
+				//printQr(qrcode);
 		}
 		{
 			const int kanjiChars[] = {  // Kanji mode encoding (13 bits per character)
@@ -271,7 +309,8 @@ static void doSegmentDemo(void) {
 			ok = qrcodegen_encodeSegments(&seg, 1, qrcodegen_Ecc_LOW, tempBuffer, qrcode);
 			free(segBuf);
 			if (ok)
-				printQr(qrcode);
+				saveQr(qrcode, "QR-Segment-5.BMP");
+				//printQr(qrcode);
 		}
 	}
 }
@@ -287,12 +326,14 @@ static void doMaskDemo(void) {
 		ok = qrcodegen_encodeText("https://www.nayuki.io/", tempBuffer, qrcode,
 			qrcodegen_Ecc_HIGH, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Mask-1.BMP");
+			//printQr(qrcode);
 		
 		ok = qrcodegen_encodeText("https://www.nayuki.io/", tempBuffer, qrcode,
 			qrcodegen_Ecc_HIGH, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_3, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Mask-2.BMP");
+			//printQr(qrcode);
 	}
 	
 	{  // Chinese text as UTF-8
@@ -311,22 +352,26 @@ static void doMaskDemo(void) {
 		ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_0, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Mask-3.BMP");
+			//printQr(qrcode);
 		
 		ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_1, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Mask-4.BMP");
+			//printQr(qrcode);
 		
 		ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_5, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Mask-5.BMP");
+			//printQr(qrcode);
 		
 		ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_7, true);
 		if (ok)
-			printQr(qrcode);
+			saveQr(qrcode, "QR-Mask-6.BMP");
+			//printQr(qrcode);
 	}
 }
 
@@ -334,7 +379,7 @@ static void doMaskDemo(void) {
 
 /*---- Utilities ----*/
 
-static uint8_t* bmpACreate(uint8_t* data, uint32_t width, uint32_t height, uint32_t* dataSize)
+static uint8_t* bmpACreate(uint8_t* data, uint32_t width, uint32_t height, uint32_t lineSize, uint32_t* dataSize)
 {
 	struct __attribute__((__packed__)) {
 		// BMP header
@@ -375,8 +420,8 @@ static uint8_t* bmpACreate(uint8_t* data, uint32_t width, uint32_t height, uint3
 			{0x00000000, 0x00FFFFFF} //colors: Black, white
 	};
 
-	if ((width % 8) != 0)
-		return NULL;
+	//if ((width % 8) != 0)
+		//return NULL;
 
 	int32_t rowSize = ((width + 31) / 32) * 4;
 	int32_t x, y;
@@ -400,8 +445,8 @@ static uint8_t* bmpACreate(uint8_t* data, uint32_t width, uint32_t height, uint3
 	memcpy(bitmap, &bitmapHeader, sizeof(bitmapHeader));
 
 	for (y = 0; y < height; y++)
-		for (x = 0; x < width/8; x++)
-			bitmap[sizeof(bitmapHeader) + ((height - 1 - y) * rowSize) + x] = ~(data[y * (width/8) + x]);
+		for (x = 0; x < lineSize; x++)
+			bitmap[sizeof(bitmapHeader) + ((height - 1 - y) * rowSize) + x] = ~(data[y * lineSize + x]);
 
 	*dataSize = bitmapHeader.fileSize;
 
@@ -416,18 +461,20 @@ static void saveQr(const uint8_t qrcode[], const char* filename)
 	uint32_t qrBitmapSize;
 
 	int size = qrcodegen_getSize(qrcode);
-	int border = 4;
-	int side = (size + border + border + 7) / 8 * 8;
-	qrImage = calloc(side * side / 8, sizeof(uint8_t));
+	int border = 3;
+	int line = (size + border + border + 7) / 8;
+	int side = size + border + border;
+	int offset = (side - size) / 2;
+	qrImage = calloc(side * line, sizeof(uint8_t));
 
-	for (int y = -border; y < size + border; y++) {
-		for (int x = -border; x < size + border; x++) {
+	for (int y = 0; y < size; y++) {
+		for (int x = 0; x < size; x++) {
 			if (qrcodegen_getModule(qrcode, x, y))
-				qrImage[y * (side/8) + x/8] |= 1 << (7 - (x % 8));
+				qrImage[(y+offset) * line + (x+offset)/8] |= 1 << (7 - ((x+offset) % 8));
 		}
 	}
 
-	qrBitmap = bmpACreate(qrImage, side, side, &qrBitmapSize);
+	qrBitmap = bmpACreate(qrImage, side, side, line, &qrBitmapSize);
 
 	file = fopen(filename, "w");
 
