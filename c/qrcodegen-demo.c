@@ -509,13 +509,12 @@ static void saveQr(const uint8_t qrcode[], const char* filename)
 	int border = 3;
 	int line = (size + border + border + 7) / 8;
 	int side = size + border + border;
-	int offset = (side - size) / 2;
 	qrImage = calloc(side * line, sizeof(uint8_t));
 
 	for (int y = 0; y < size; y++) {
 		for (int x = 0; x < size; x++) {
 			if (qrcodegen_getModule(qrcode, x, y))
-				qrImage[(y+offset) * line + (x+offset)/8] |= 1 << (7 - ((x+offset) % 8));
+				qrImage[(y+border) * line + (x+border)/8] |= 1 << (7 - ((x+border) % 8));
 		}
 	}
 
