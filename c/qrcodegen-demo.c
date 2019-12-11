@@ -84,31 +84,55 @@ static void doOptimizedDemo(void) {
 						"5802GE"
 						"5925Gigo's Groceryabcdefghijk"
 						"6015Tbilisiabcdefgh"
-						"623005091234567890713QR-WJ24I08B9K"
+						"6230"	"0509123456789"
+								"0713QR-WJ24I08B9K"
 						"630420D7";                // User-supplied text
 	const char *text2 =	"000201"
 						"010211"
-						"2681"
-						"0011SG.COM.NETS"
-						"01231198500065G991231235900"
-						"021111168661400"
-						"030868661401"
-						"9908604108C2"
-						"5180"
-						"0007SG.SGQR"
-						"01121809072DD85C"
-						"020701.0001"
-						"0306079027"
-						"040201"
-						"050206"
-						"06040000"
-						"070820180915"
+						"2681"	"0011SG.COM.NETS"
+								"01231198500065G991231235900"
+								"021111168661400"
+								"030868661401"
+								"9908604108C2"
+						"5180"	"0007SG.SGQR"
+								"01121809072DD85C"
+								"020701.0001"
+								"0306079027"
+								"040201"
+								"050206"
+								"06040000"
+								"070820180915"
 						"52045812"
 						"5303702"
 						"5802SG"
 						"5912SOBA EXPRESS"
 						"6009Singapore"
 						"630457B3";
+	const char *text3 = "000201"
+						"010211"
+						"2652"	"0008com.grab"
+								"01365af16fa7-25d5-442b-8c19-b88ddafb14c7"
+						"2733"	"0015sg.com.dash.www"
+								"01100000004647"
+						"2881"	"0011SG.COM.NETS"
+								"01231198500065G991231235900"
+								"021111187787200"
+								"030887787201"
+								"99084136B4AE"
+						"5180"	"0007SG.SGQR"
+								"011218090900176B"
+								"020700.0021"
+								"0306079027"
+								"040201"
+								"050213"
+								"06040000"
+								"070820180911"
+						"52045812"
+						"5303702"
+						"5802SG"
+						"5909TOAST BOX"
+						"6009Singapore"
+						"6304B081";
 	enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;  // Error correction level
 	
 	// Make and print the QR Code symbol
@@ -119,15 +143,36 @@ static void doOptimizedDemo(void) {
 
 	uint8_t* charModes = malloc(strlen(text) + sizeof(char));
 
-	bool ok = qrcodegen_encodeTextOptimized(text, optimizationBuffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
+	bool ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
+			errCorLvl, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	if (ok)
+		saveQr(qrcode, "QR-NotOptimized-1.BMP");
+
+	ok = qrcodegen_encodeTextOptimized(text, optimizationBuffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
 		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 	if (ok)
 		saveQr(qrcode, "QR-Optimized-1.BMP");
+
+	ok = qrcodegen_encodeText(text2, tempBuffer, qrcode,
+			errCorLvl, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	if (ok)
+		saveQr(qrcode, "QR-NotOptimized-2.BMP");
 
 	ok = qrcodegen_encodeTextOptimized(text2, optimizationBuffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
 		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 	if (ok)
 		saveQr(qrcode, "QR-Optimized-2.BMP");
+		//printQr(qrcode);
+
+	ok = qrcodegen_encodeText(text3, tempBuffer, qrcode,
+			errCorLvl, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	if (ok)
+		saveQr(qrcode, "QR-NotOptimized-3.BMP");
+
+	ok = qrcodegen_encodeTextOptimized(text3, optimizationBuffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
+		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	if (ok)
+		saveQr(qrcode, "QR-Optimized-3.BMP");
 		//printQr(qrcode);
 
 	free(charModes);
