@@ -37,7 +37,9 @@ static void doBasicDemo(void);
 static void doVarietyDemo(void);
 static void doSegmentDemo(void);
 static void doMaskDemo(void);
+static void doOptimizedDemo(void);
 static void printQr(const uint8_t qrcode[]);
+static void saveQr(const uint8_t qrcode[], const char* filename);
 
 
 // The main application program.
@@ -46,6 +48,7 @@ int main(void) {
 	doVarietyDemo();
 	doSegmentDemo();
 	doMaskDemo();
+	doOptimizedDemo();
 	return EXIT_SUCCESS;
 }
 
@@ -65,6 +68,40 @@ static void doBasicDemo(void) {
 		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 	if (ok)
 		printQr(qrcode);
+}
+
+// Creates an optimized QR Code, then prints it to the console.
+static void doOptimizedDemo(void) {
+	const char *text = 	"000201"
+						"010212"
+						"02164116340081341102"
+						"52045411"
+						"5303981"
+						"54131234567890.50"
+						"5502"
+						"56123456789012.50"
+						"5802GE"
+						"5925Gigo's Groceryabcdefghijk"
+						"6015Tbilisiabcdefgh"
+						"623005091234567890713QR-WJ24I08B9K"
+						"630420D7";                // User-supplied text
+	enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;  // Error correction level
+	
+	// Make and print the QR Code symbol
+	uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
+	uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
+	uint8_t optimizationBufffer[qrcodegen_OPTIMIZATION_BUFFER_LEN_MAX];
+	uint8_t segmentBuffer[qrcodegen_OPTIMIZED_SEGMENT_BUFFER_LEN_MAX];
+
+	uint8_t* charModes = malloc(strlen(text) + sizeof(char));
+
+	bool ok = qrcodegen_encodeTextOptimized(text, optimizationBufffer, segmentBuffer, tempBuffer, charModes, qrcode, errCorLvl,
+		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	if (ok)
+		saveQr(qrcode, "QR.BMP");
+		//printQr(qrcode);
+
+	free(charModes);
 }
 
 
@@ -297,6 +334,111 @@ static void doMaskDemo(void) {
 
 /*---- Utilities ----*/
 
+static uint8_t* bmpACreate(uint8_t* data, uint32_t width, uint32_t height, uint32_t* dataSize)
+{
+	struct __attribute__((__packed__)) {
+		// BMP header
+		uint8_t 	id[2];
+		uint32_t 	fileSize;
+		uint8_t		reserved[4];
+		uint32_t 	offset;
+		// DIB header (Windows BITMAPINFOHEADER)
+		uint32_t 	dibSize; // should be 40
+		uint32_t 	width;
+		uint32_t 	height;
+		uint16_t 	planes;
+		uint16_t 	bpp;
+		uint32_t 	compression; // 0 - no compression
+		uint32_t 	dataSize; // image data dataSize
+		int32_t 	dpiX;
+		int32_t 	dpiY;
+		uint32_t 	paletteColors;
+		uint32_t 	importantColors;
+		// Palette
+		uint32_t	colors[2];
+	} bitmapHeader = {
+			{0x42, 0x4D},			//id: BM
+			0,						//fileSize
+			{0, 0, 0, 0},			//reserved
+			0,						//offset
+			40,						//dibSize
+			0,						//width
+			0,						//height
+			1,						//planes
+			1,						//bpp
+			0,						//compression
+			0,						//dataSize
+			0,						//dpiX
+			0,						//dpiY
+			0,						//paletteColors
+			0,						//importantColors
+			{0x00000000, 0x00FFFFFF} //colors: Black, white
+	};
+
+	if ((width % 8) != 0)
+		return NULL;
+
+	int32_t rowSize = ((width + 31) / 32) * 4;
+	int32_t x, y;
+	uint8_t* bitmap = NULL;
+
+	bitmapHeader.offset = sizeof(bitmapHeader);
+	bitmapHeader.width = width;
+	bitmapHeader.height = height;
+	bitmapHeader.dataSize = rowSize * height;
+	bitmapHeader.fileSize = bitmapHeader.dataSize + sizeof(bitmapHeader);
+
+	bitmap = calloc(bitmapHeader.fileSize, sizeof(uint8_t));
+
+	if(!bitmap)
+	{
+		printf("No memory for bitmap!\n");
+		*dataSize = 0;
+		return NULL;
+	}
+
+	memcpy(bitmap, &bitmapHeader, sizeof(bitmapHeader));
+
+	for (y = 0; y < height; y++)
+		for (x = 0; x < width/8; x++)
+			bitmap[sizeof(bitmapHeader) + ((height - 1 - y) * rowSize) + x] = ~(data[y * (width/8) + x]);
+
+	*dataSize = bitmapHeader.fileSize;
+
+	return bitmap;
+}
+
+static void saveQr(const uint8_t qrcode[], const char* filename)
+{
+	FILE* file;
+	uint8_t* qrImage = NULL;
+	uint8_t* qrBitmap = NULL;
+	uint32_t qrBitmapSize;
+
+	int size = qrcodegen_getSize(qrcode);
+	int border = 4;
+	int side = (size + border + border + 7) / 8 * 8;
+	qrImage = calloc(side * side / 8, sizeof(uint8_t));
+
+	for (int y = -border; y < size + border; y++) {
+		for (int x = -border; x < size + border; x++) {
+			if (qrcodegen_getModule(qrcode, x, y))
+				qrImage[y * (side/8) + x/8] |= 1 << (7 - (x % 8));
+		}
+	}
+
+	qrBitmap = bmpACreate(qrImage, side, side, &qrBitmapSize);
+
+	file = fopen(filename, "w");
+
+	fwrite(qrBitmap, 1, qrBitmapSize, file);
+
+	fclose(file);
+
+	free(qrImage);
+	free(qrBitmap);
+}
+
 // Prints the given QR Code to the console.
 static void printQr(const uint8_t qrcode[]) {
 	int size = qrcodegen_getSize(qrcode);
@@ -308,4 +450,5 @@ static void printQr(const uint8_t qrcode[]) {
 		fputs("\n", stdout);
 	}
 	fputs("\n", stdout);
+	fflush(stdout);
 }

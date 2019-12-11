@@ -143,6 +143,11 @@ struct qrcodegen_Segment {
 // Use this more convenient value to avoid calculating tighter memory bounds for buffers.
 #define qrcodegen_BUFFER_LEN_MAX  qrcodegen_BUFFER_LEN_FOR_VERSION(qrcodegen_VERSION_MAX)
 
+#define qrcodegen_OPTIMIZED_MODE_TYPES_NUM 3
+#define qrcodegen_OPTIMIZATION_BUFFER_LEN_MAX (qrcodegen_BUFFER_LEN_MAX * qrcodegen_OPTIMIZED_MODE_TYPES_NUM)
+
+#define qrcodegen_OPTIMIZED_SEGMENTS_MAX  10 // The maximum segments in optimized QR code
+#define qrcodegen_OPTIMIZED_SEGMENT_BUFFER_LEN_MAX (qrcodegen_BUFFER_LEN_MAX * qrcodegen_OPTIMIZED_SEGMENTS_MAX)
 
 
 /*---- Functions (high level) to generate QR Codes ----*/
@@ -169,6 +174,9 @@ struct qrcodegen_Segment {
 bool qrcodegen_encodeText(const char *text, uint8_t tempBuffer[], uint8_t qrcode[],
 	enum qrcodegen_Ecc ecl, int minVersion, int maxVersion, enum qrcodegen_Mask mask, bool boostEcl);
 
+
+bool qrcodegen_encodeTextOptimized(const char *text, uint8_t optimizationBuffer[], uint8_t segmentBuffer[], uint8_t tempBuffer[], uint8_t charModes[], uint8_t qrcode[],
+		enum qrcodegen_Ecc ecl, int minVersion, int maxVersion, enum qrcodegen_Mask mask, bool boostEcl);
 
 /* 
  * Encodes the given binary data to a QR Code, returning true if encoding succeeded.
@@ -270,6 +278,7 @@ struct qrcodegen_Segment qrcodegen_makeBytes(const uint8_t data[], size_t len, u
  * Returns a segment representing the given string of decimal digits encoded in numeric mode.
  */
 struct qrcodegen_Segment qrcodegen_makeNumeric(const char *digits, uint8_t buf[]);
+struct qrcodegen_Segment qrcodegen_makeNumericLen(const char *digits, size_t len, uint8_t buf[]);
 
 
 /* 
@@ -278,6 +287,7 @@ struct qrcodegen_Segment qrcodegen_makeNumeric(const char *digits, uint8_t buf[]
  * dollar, percent, asterisk, plus, hyphen, period, slash, colon.
  */
 struct qrcodegen_Segment qrcodegen_makeAlphanumeric(const char *text, uint8_t buf[]);
+struct qrcodegen_Segment qrcodegen_makeAlphanumericLen(const char *text, size_t len, uint8_t buf[]);
 
 
 /* 

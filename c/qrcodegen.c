@@ -85,6 +85,9 @@ testable int calcSegmentBitLength(enum qrcodegen_Mode mode, size_t numChars);
 testable int getTotalBits(const struct qrcodegen_Segment segs[], size_t len, int version);
 static int numCharCountBits(enum qrcodegen_Mode mode, int version);
 
+static int splitIntoSegments(const char *text, uint8_t tempBuffer[qrcodegen_OPTIMIZED_SEGMENTS_MAX][qrcodegen_BUFFER_LEN_MAX], uint8_t charModes[], struct qrcodegen_Segment segs[]);
+static bool computeCharacterModes(const char *text, int version, uint8_t tempBuffer[], uint8_t characterModes[]);
+static int makeSegmentsOptimally(const char *text, int version, uint8_t optimizationBuffer[], uint8_t segmentBuffer[], uint8_t characterModes[], struct qrcodegen_Segment segs[]);
 
 
 /*---- Private tables of constants ----*/
@@ -162,7 +165,182 @@ fail:
 	return false;
 }
 
+// Returns a new list of segments based on the given text and modes, such that
+// consecutive code points in the same mode are put into the same segment.
+static int splitIntoSegments(const char *text, uint8_t tempBuffer[qrcodegen_OPTIMIZED_SEGMENTS_MAX][qrcodegen_BUFFER_LEN_MAX], uint8_t charModes[], struct qrcodegen_Segment segs[])
+{
+	size_t textLen = strlen(text);
+	int segNum = 0;
 
+	// Accumulate run of modes
+	uint8_t curMode = charModes[0];
+	int start = 0;
+	for (int i = 1; ; i++) {
+		if (i < textLen && charModes[i] == curMode)
+			continue;
+		//String s = new String(codePoints, start, i - start);
+		if (curMode == qrcodegen_Mode_BYTE)
+		{
+			segs[segNum] = qrcodegen_makeBytes(&text[start], i - start, &tempBuffer[segNum]);
+			segNum++;
+		}
+		else if (curMode == qrcodegen_Mode_NUMERIC)
+		{
+			segs[segNum] = qrcodegen_makeNumericLen(&text[start], i - start, &tempBuffer[segNum]);
+			segNum++;
+		}
+		else if (curMode == qrcodegen_Mode_ALPHANUMERIC)
+		{
+			segs[segNum] = qrcodegen_makeAlphanumericLen(&text[start], i - start, &tempBuffer[segNum]);
+			segNum++;
+		}
+		else
+			return -1;
+		if (i >= textLen)
+			return segNum;
+		curMode = charModes[i];
+		start = i;
+	}
+
+	return segNum;
+}
+
+// Returns a new list of segments that is optimal for the given text at the given version number.
+static int makeSegmentsOptimally(const char *text, int version, uint8_t optimizationBuffer[], uint8_t segmentBuffer[], uint8_t characterModes[], struct qrcodegen_Segment segs[])
+{
+	if (!computeCharacterModes(text, version, optimizationBuffer, characterModes))
+		return false;
+
+	return splitIntoSegments(text, segmentBuffer, characterModes, segs);
+}
+
+// Returns a new array representing the optimal mode per code point based on the given text and version.
+static bool computeCharacterModes(const char *text, int version, uint8_t tempBuffer[], uint8_t characterModes[])
+{
+	uint8_t modeTypes[qrcodegen_OPTIMIZED_MODE_TYPES_NUM] = { qrcodegen_Mode_BYTE, qrcodegen_Mode_ALPHANUMERIC, qrcodegen_Mode_NUMERIC };
+	int headCosts[qrcodegen_OPTIMIZED_MODE_TYPES_NUM];
+	int prevCosts[qrcodegen_OPTIMIZED_MODE_TYPES_NUM];
+	int curCosts[qrcodegen_OPTIMIZED_MODE_TYPES_NUM];
+	int numModes = qrcodegen_OPTIMIZED_MODE_TYPES_NUM;
+
+	size_t textLen = strlen(text);
+
+	if (textLen == 0)
+		return false;
+
+	// Segment header sizes, measured in 1/6 bits
+	for (int i = 0; i < numModes; i++)
+		headCosts[i] = (4 + numCharCountBits(modeTypes[i], version)) * 6;
+
+	// charModes[i][j] represents the mode to encode the code point at
+	// index i such that the final segment ends in modeTypes[j] and the
+	// total number of bits is minimized over all possible choices
+	uint8_t (*charModes)[qrcodegen_OPTIMIZED_MODE_TYPES_NUM] = tempBuffer;
+
+	// At the beginning of each iteration of the loop below,
+	// prevCosts[j] is the exact minimum number of 1/6 bits needed to
+	// encode the entire string prefix of length i, and end in modeTypes[j]
+	memcpy(prevCosts, headCosts, sizeof(prevCosts));
+
+	// Calculate costs using dynamic programming
+	for (int i = 0; i < textLen; i++) 
+	{
+		char c = text[i];
+		memset(curCosts, 0, sizeof(curCosts));
+		{  // Always extend a byte mode segment
+			curCosts[0] = prevCosts[0] + 48; // 8 bits per byte
+			charModes[i][0] = modeTypes[0];
+		}
+		// Extend a segment if possible
+		if (strchr(ALPHANUMERIC_CHARSET, c) != NULL)  // Is alphanumeric
+		{
+			curCosts[1] = prevCosts[1] + 33;  // 5.5 bits per alphanumeric char
+			charModes[i][1] = modeTypes[1];
+		}
+		else
+			charModes[i][1] = 0;
+
+		if (c >= '0' && c <= '9')
+		{
+			curCosts[2] = prevCosts[2] + 20;  // 3.33 bits per digit
+			charModes[i][2] = modeTypes[2];
+		}
+		else
+			charModes[i][2] = 0;
+
+		// Start new segment at the end to switch modes
+		for (int j = 0; j < numModes; j++) {  // To mode
+			for (int k = 0; k < numModes; k++) {  // From mode
+				int newCost = (curCosts[k] + 5) / 6 * 6 + headCosts[j];
+				if (charModes[i][k] != 0 && (charModes[i][j] == 0 || newCost < curCosts[j])) {
+					curCosts[j] = newCost;
+					charModes[i][j] = modeTypes[k];
+				}
+			}
+		}
+
+		memcpy(prevCosts, curCosts, sizeof(prevCosts));
+	}
+
+	// Find optimal ending mode
+	uint8_t curMode = 0;
+	for (int i = 0, minCost = 0; i < numModes; i++) {
+		if (curMode == 0 || prevCosts[i] < minCost) {
+			minCost = prevCosts[i];
+			curMode = modeTypes[i];
+		}
+	}
+
+	// Get optimal mode for each code point by tracing backwards
+	for (int i = textLen - 1; i >= 0; i--) {
+		for (int j = 0; j < numModes; j++) {
+			if (modeTypes[j] == curMode) {
+				curMode = charModes[i][j];
+				characterModes[i] = curMode;
+				break;
+			}
+		}
+	}
+
+	return true;
+}
+
+
+// Public function - see documentation comment in header file.
+bool qrcodegen_encodeTextOptimized(const char *text, uint8_t optimizationBuffer[], uint8_t segmentBuffer[], uint8_t tempBuffer[], uint8_t charModes[], uint8_t qrcode[],
+		enum qrcodegen_Ecc ecl, int minVersion, int maxVersion, enum qrcodegen_Mask mask, bool boostEcl) {
+
+	size_t textLen = strlen(text);
+	if (textLen == 0)
+		return qrcodegen_encodeSegmentsAdvanced(NULL, 0, ecl, minVersion, maxVersion, mask, boostEcl, tempBuffer, qrcode);
+	//size_t bufLen = (size_t)qrcodegen_BUFFER_LEN_FOR_VERSION(maxVersion);
+
+	struct qrcodegen_Segment segs[qrcodegen_OPTIMIZED_SEGMENTS_MAX] = { 0 };
+	size_t len = 0;
+	for (int version = minVersion; ; version++)
+	{
+		len = makeSegmentsOptimally(text, version, optimizationBuffer, segmentBuffer, charModes, segs);
+
+		if (len < 0)
+			return false;
+
+		// Check if the segments fit
+		int dataCapacityBits = getNumDataCodewords(version, ecl) * 8;  // Number of data bits available
+		int dataUsedBits = getTotalBits(&segs, len, version);
+		if (dataUsedBits != -1 && dataUsedBits <= dataCapacityBits)
+			break;  // This version number is found to be suitable
+		if (version >= maxVersion) {  // All versions in the range could not fit the given data
+			qrcode[0] = 0;  // Set size to invalid value for safety
+			return false;
+		}
+	}
+
+	return qrcodegen_encodeSegmentsAdvanced(&segs, len, ecl, minVersion, maxVersion, mask, boostEcl, tempBuffer, qrcode);
+	
+//fail:
+	qrcode[0] = 0;  // Set size to invalid value for safety
+	return false;
+}
 // Public function - see documentation comment in header file.
 bool qrcodegen_encodeBinary(uint8_t dataAndTemp[], size_t dataLen, uint8_t qrcode[],
 		enum qrcodegen_Ecc ecl, int minVersion, int maxVersion, enum qrcodegen_Mask mask, bool boostEcl) {
@@ -918,6 +1096,37 @@ struct qrcodegen_Segment qrcodegen_makeNumeric(const char *digits, uint8_t buf[]
 	return result;
 }
 
+struct qrcodegen_Segment qrcodegen_makeNumericLen(const char *digits, size_t len, uint8_t buf[]) {
+	assert(digits != NULL);
+	struct qrcodegen_Segment result;
+	result.mode = qrcodegen_Mode_NUMERIC;
+	int bitLen = calcSegmentBitLength(result.mode, len);
+	assert(bitLen != -1);
+	result.numChars = (int)len;
+	if (bitLen > 0)
+		memset(buf, 0, ((size_t)bitLen + 7) / 8 * sizeof(buf[0]));
+	result.bitLength = 0;
+	
+	unsigned int accumData = 0;
+	int accumCount = 0;
+	for (size_t i = 0; i < len; i++, digits++) {
+		char c = *digits;
+		assert('0' <= c && c <= '9');
+		accumData = accumData * 10 + (unsigned int)(c - '0');
+		accumCount++;
+		if (accumCount == 3) {
+			appendBitsToBuffer(accumData, 10, buf, &result.bitLength);
+			accumData = 0;
+			accumCount = 0;
+		}
+	}
+	if (accumCount > 0)  // 1 or 2 digits remaining
+		appendBitsToBuffer(accumData, accumCount * 3 + 1, buf, &result.bitLength);
+	assert(result.bitLength == bitLen);
+	result.data = buf;
+	return result;
+}
+
 
 // Public function - see documentation comment in header file.
 struct qrcodegen_Segment qrcodegen_makeAlphanumeric(const char *text, uint8_t buf[]) {
@@ -935,6 +1144,37 @@ struct qrcodegen_Segment qrcodegen_makeAlphanumeric(const char *text, uint8_t bu
 	unsigned int accumData = 0;
 	int accumCount = 0;
 	for (; *text != '\0'; text++) {
+		const char *temp = strchr(ALPHANUMERIC_CHARSET, *text);
+		assert(temp != NULL);
+		accumData = accumData * 45 + (unsigned int)(temp - ALPHANUMERIC_CHARSET);
+		accumCount++;
+		if (accumCount == 2) {
+			appendBitsToBuffer(accumData, 11, buf, &result.bitLength);
+			accumData = 0;
+			accumCount = 0;
+		}
+	}
+	if (accumCount > 0)  // 1 character remaining
+		appendBitsToBuffer(accumData, 6, buf, &result.bitLength);
+	assert(result.bitLength == bitLen);
+	result.data = buf;
+	return result;
+}
+
+struct qrcodegen_Segment qrcodegen_makeAlphanumericLen(const char *text, size_t len, uint8_t buf[]) {
+	assert(text != NULL);
+	struct qrcodegen_Segment result;
+	result.mode = qrcodegen_Mode_ALPHANUMERIC;
+	int bitLen = calcSegmentBitLength(result.mode, len);
+	assert(bitLen != -1);
+	result.numChars = (int)len;
+	if (bitLen > 0)
+		memset(buf, 0, ((size_t)bitLen + 7) / 8 * sizeof(buf[0]));
+	result.bitLength = 0;
+	
+	unsigned int accumData = 0;
+	int accumCount = 0;
+	for (size_t i = 0; i < len; i++, text++) {
 		const char *temp = strchr(ALPHANUMERIC_CHARSET, *text);
 		assert(temp != NULL);
 		accumData = accumData * 45 + (unsigned int)(temp - ALPHANUMERIC_CHARSET);
